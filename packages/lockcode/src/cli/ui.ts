@@ -3,10 +3,12 @@ import { Schema } from "effect"
 import { logo as glyphs } from "./logo"
 
 const wordmark = [
-  `⠀                                ▄     `,
-  `█▀▀█ █▀▀█ █▀▀█ █▀▀▄ █▀▀▀ █▀▀█ █▀▀█ █▀▀█`,
-  `█  █ █  █ █▀▀▀ █  █ █    █  █ █  █ █▀▀▀`,
-  `▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀`,
+  `██╗      ██████╗  ██████╗██╗  ██╗ ██████╗ ██████╗ ██████╗ ███████╗`,
+  `██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝██╔═══██╗██╔══██╗██╔════╝`,
+  `██║     ██║   ██║██║     █████╔╝ ██║     ██║   ██║██║  ██║█████╗  `,
+  `██║     ██║   ██║██║     ██╔═██╗ ██║     ██║   ██║██║  ██║██╔══╝  `,
+  `███████╗╚██████╔╝╚██████╗██║  ██╗╚██████╗╚██████╔╝██████╔╝███████╗`,
+  `╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝`,
 ]
 
 export class CancelledError extends Schema.TaggedErrorClass<CancelledError>()("UICancelledError", {}) {}
@@ -94,7 +96,7 @@ export function logo(pad?: string) {
   }
   glyphs.left.forEach((row, index) => {
     if (pad) result.push(pad)
-    result.push(draw(row, left.fg, left.shadow, left.bg))
+    result.push(draw(row, right.fg, right.shadow, right.bg))
     result.push(gap)
     const other = glyphs.right[index] ?? ""
     result.push(draw(other, right.fg, right.shadow, right.bg))
