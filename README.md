@@ -27,7 +27,7 @@ lockcode models          # list model
 ```bash
 bun install
 cd packages/lockcode
-LOCKCODE_CHANNEL=latest LOCKCODE_VERSION=0.1.2 bun run script/build.ts --skip-install
+LOCKCODE_CHANNEL=latest LOCKCODE_VERSION=0.1.3 bun run script/build.ts --skip-install
 # output: dist/lockcode-linux-arm64/bin/lockcode
 # kecilin: # (opsional) upx --best --lzma — GAK DISARANKAN: UPX binary gak jalan di Android Termux
 ```
