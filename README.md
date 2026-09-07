@@ -11,7 +11,7 @@ curl -fsSL https://raw.githubusercontent.com/prototypeall850-creator/lockcode/ma
 
 Installer otomatis: pasang repo glibc + glibc-runner, download binary **terbaru**
 dari GitHub Releases, bikin wrapper. Pin versi tertentu:
-`curl ... | bash -s v0.1.2`
+`curl ... | bash -s v0.1.3`
 
 ## Pakai
 
@@ -29,5 +29,5 @@ bun install
 cd packages/lockcode
 LOCKCODE_CHANNEL=latest LOCKCODE_VERSION=0.1.2 bun run script/build.ts --skip-install
 # output: dist/lockcode-linux-arm64/bin/lockcode
-# kecilin: upx --best --lzma dist/lockcode-linux-arm64/bin/lockcode
+# kecilin: # (opsional) upx --best --lzma — GAK DISARANKAN: UPX binary gak jalan di Android Termux
 ```
