@@ -1,0 +1,26 @@
+# node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# build output
+packages/lockcode/dist/
+packages/*/dist/
+
+# bun
+.bun/
+
+# os
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+*.swp
+
+# secrets — jangan pernah commit
+.env
+*.pem
+auth.json
+deliver/lockcode-arm64
