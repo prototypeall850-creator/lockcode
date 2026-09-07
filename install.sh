@@ -1,6 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/bash
-# lockcode installer — curl -fsSL https://raw.githubusercontent.com/prototypeall850-creator/lockcode/main/install.sh | bash
-# mirror pola opencode install: detect termux → pasang glibc runtime → download binary terbaru → wrapper
+# lockcode installer — detect termux → pasang glibc runtime → download binary terbaru → wrapper
 set -euo pipefail
 
 REPO="prototypeall850-creator/lockcode"
