@@ -1,12 +1,6 @@
 import { EOL } from "os"
 import { Schema } from "effect"
-import { logo as glyphs } from "./logo"
-
-const wordmark = [
-  `█   █▀▀█ █▀▀▀ █▀▀▄ █▀▀▀ █▀▀█ █▀▀█ █▀▀█`,
-  `█   █  █ █   █▀▀  █   █  █ █  █ █▀▀▀`,
-  `▀   ▀▀▀▀ ▀▀▀▀ ▀  █ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀`,
-]
+import { artAnsi, logo as glyphs } from "./logo"
 
 export class CancelledError extends Schema.TaggedErrorClass<CancelledError>()("UICancelledError", {}) {}
 
@@ -47,7 +41,7 @@ export function empty() {
 export function logo(pad?: string) {
   if (!process.stdout.isTTY && !process.stderr.isTTY) {
     const result = []
-    for (const row of wordmark) {
+    for (const row of glyphs.left) {
       if (pad) result.push(pad)
       result.push(row)
       result.push(EOL)
@@ -55,51 +49,7 @@ export function logo(pad?: string) {
     return result.join("").trimEnd()
   }
 
-  const result: string[] = []
-  const reset = "\x1b[0m"
-  const left = {
-    fg: "\x1b[90m",
-    shadow: "\x1b[38;5;235m",
-    bg: "\x1b[48;5;235m",
-  }
-  const right = {
-    fg: reset,
-    shadow: "\x1b[38;5;238m",
-    bg: "\x1b[48;5;238m",
-  }
-  const gap = " "
-  const draw = (line: string, fg: string, shadow: string, bg: string) => {
-    const parts: string[] = []
-    for (const char of line) {
-      if (char === "_") {
-        parts.push(bg, " ", reset)
-        continue
-      }
-      if (char === "^") {
-        parts.push(fg, bg, "▀", reset)
-        continue
-      }
-      if (char === "~") {
-        parts.push(shadow, "▀", reset)
-        continue
-      }
-      if (char === " ") {
-        parts.push(" ")
-        continue
-      }
-      parts.push(fg, char, reset)
-    }
-    return parts.join("")
-  }
-  glyphs.left.forEach((row, index) => {
-    if (pad) result.push(pad)
-    result.push(draw(row, right.fg, right.shadow, right.bg))
-    result.push(gap)
-    const other = glyphs.right[index] ?? ""
-    result.push(draw(other, right.fg, right.shadow, right.bg))
-    result.push(EOL)
-  })
-  return result.join("").trimEnd()
+  return artAnsi(pad).join(EOL)
 }
 
 export async function input(prompt: string): Promise<string> {

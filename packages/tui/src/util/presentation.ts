@@ -1,13 +1,12 @@
-import { logo } from "../logo"
+import { artAnsi } from "../logo"
 
 const reset = "\x1b[0m"
 const bold = "\x1b[1m"
 const dim = "\x1b[90m"
 
 function wordmark(pad = "") {
-  return logo.left.map((line) => `${pad}${line}`)
+  return artAnsi(pad)
 }
-
 export function sessionEpilogue(input: { title: string; sessionID?: string }) {
   const weak = (text: string) => `${dim}${text.padEnd(10, " ")}${reset}`
   return [
