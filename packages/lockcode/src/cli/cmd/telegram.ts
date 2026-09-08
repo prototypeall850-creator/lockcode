@@ -136,20 +136,44 @@ export const TelegramCommand = {
       ].join("\n")
       await fs.writeFile(path.join(serviceDir, "run"), runScript, { mode: 0o755 })
 
+      // daemon runsvdir baru jalan otomatis di login shell berikutnya — kalau
+      // termux-services baru terpasang di sesi ini, harus di-start manual
       if (!(await has("sv"))) {
         prompts.log.info("termux-services gak ada, install…")
-        if (!await pkgInstall("termux-services")) {
+        if (!(await pkgInstall("termux-services"))) {
           prompts.log.warning("service gak terpasang. Jalankan manual: node " + botPath)
           prompts.outro("Setup selesai (tanpa service)")
           return
         }
       }
-      const up = await Process.run(["sv", "up", "lockcode-tele"], { stdout: "pipe", stderr: "pipe", nothrow: true })
-      if (up.code === 0) {
+      const daemonUp = await Process.run(["pgrep", "-f", "runsvdir"], { stdout: "pipe", stderr: "pipe", nothrow: true })
+      if (daemonUp.code !== 0) {
+        const s = prompts.spinner()
+        s.start("nyalain service daemon (runsvdir)")
+        const d = await Process.run(["service-daemon", "start"], {
+          stdout: "pipe",
+          stderr: "pipe",
+          nothrow: true,
+          env: { SVDIR: path.join(prefix(), "var", "service") },
+        })
+        if (d.code === 0) s.stop("service daemon jalan")
+        else s.stop("service-daemon gagal: " + d.stderr.toString().trim().slice(0, 120))
+      }
+
+      // runsvdir polling direktori service — sv butuh waktu sync, retry
+      let up: Awaited<ReturnType<typeof Process.run>> | undefined
+      for (let i = 0; i < 5; i++) {
+        await new Promise((r) => setTimeout(r, 1500))
+        up = await Process.run(["sv", "up", "lockcode-tele"], { stdout: "pipe", stderr: "pipe", nothrow: true })
+        if (up.code === 0) break
+      }
+      if (up?.code === 0) {
         prompts.log.success("service jalan — bot hidup dan auto-restart")
       } else {
         prompts.log.warning(
-          "sv up gagal: " + up.stderr.toString().trim().slice(0, 120) + " — coba manual: sv up lockcode-tele",
+          "sv up belum sukses (" +
+            up?.stderr.toString().trim().slice(0, 80) +
+            "). Restart Termux sekali, lalu jalankan: sv up lockcode-tele",
         )
       }
       prompts.log.message(`Log: ~/lockcode-tele/bot.log · matikan: sv down lockcode-tele`)
