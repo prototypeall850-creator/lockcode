@@ -178,9 +178,27 @@ export const TelegramCommand = {
         )
       }
       prompts.log.message(`Log: ~/lockcode-tele/bot.log · matikan: sv down lockcode-tele`)
+
+      // Termux:Boot — bot nyala otomatis pas HP restart
+      const bootDir = path.join(os.homedir(), ".termux", "boot")
+      await fs.mkdir(bootDir, { recursive: true })
+      await fs.writeFile(
+        path.join(bootDir, "lockcode-tele.sh"),
+        ["#!/data/data/com.termux/files/usr/bin/sh", "termux-wake-lock", "sv up lockcode-tele", ""].join("\n"),
+        { mode: 0o700 },
+      )
+      prompts.log.step("script boot dibuat (~/.termux/boot/lockcode-tele.sh) — pasang app Termux:Boot biar auto jalan saat HP restart")
     } else {
       prompts.log.message(`Jalankan manual:\n  set -a; source ${INSTALL_DIR}/.env; set +a\n  node ${botPath}`)
     }
+
+    // biar Android/OEM gak ngebunuh Termux di background
+    prompts.log.message(
+      "Biar bot stay jalan di background:\n" +
+        "  1. Settings → Apps → Termux → Battery → Unrestricted\n" +
+        "  2. Lock Termux di recents (tarik kartu app → gembok)\n" +
+        "  3. HP Oppo/Vivo/Xiaomi/Realme: allow autostart di security app",
+    )
 
     prompts.outro("Selesai! Cek Telegram lu, kirim /status ke bot.")
   },

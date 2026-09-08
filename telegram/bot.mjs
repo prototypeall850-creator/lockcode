@@ -17,11 +17,6 @@ const HOME = homedir()
 
 const TELE_TOKEN = process.env.TELE_TOKEN
 const ADMIN_ID = process.env.TELE_ADMIN_ID // angka, wajib
-const ALLOWED = new Set(
-  [ADMIN_ID, ...(process.env.TELE_ALLOWED_IDS || "").split(",")]
-    .filter(Boolean)
-    .map((s) => String(s).trim()),
-)
 const LOCKCODE_BIN = process.env.LOCKCODE_BIN || "lockcode"
 const LOCKCODE_CWD = process.env.LOCKCODE_CWD || process.cwd()
 const TIMEOUT_MS = Number(process.env.LOCKCODE_TELE_TIMEOUT || 300) * 1000
@@ -36,12 +31,16 @@ const CHAT_SYSTEM =
 
 // ---------- state ----------
 // model: null = default (zen free). mode: "agent" | "chat".
-// sessions: { [chatID]: agentSessionID }, history: { [chatID]: [{role, content}] }
-let state = { model: null, mode: "agent", sessions: {}, history: {} }
+// sessions: { [chatID]: agentSessionID }, history: { [chatID]: [{role, content}] },
+// allowed: [userID] tambahan dari /allow
+let state = { model: null, mode: "agent", sessions: {}, history: {}, allowed: [] }
 try {
   if (existsSync(STATE_FILE)) state = { ...state, ...JSON.parse(readFileSync(STATE_FILE, "utf8")) }
 } catch {}
 const save = () => writeFileSync(STATE_FILE, JSON.stringify(state, null, 2))
+
+const ALLOWED_BASE = new Set([ADMIN_ID, ...(process.env.TELE_ALLOWED_IDS || "").split(",")].filter(Boolean).map((s) => String(s).trim()))
+const isAllowed = (id) => ALLOWED_BASE.has(String(id)) || (state.allowed || []).includes(String(id))
 
 // ---------- telegram api ----------
 const api = (method, body) =>
@@ -260,28 +259,38 @@ function zenToken() {
   return null
 }
 
-// default model agent = recent (model.json) → first sorted model free opencode
-function defaultChatModel() {
-  const xdgState = process.env.XDG_STATE_HOME || join(HOME, ".local", "state")
-  try {
-    const rec = JSON.parse(readFileSync(join(xdgState, "lockcode", "model.json"), "utf8"))
-    if (Array.isArray(rec.recent) && rec.recent[0]?.modelID) return rec.recent[0].modelID
-  } catch {}
-  const xdgCache = process.env.XDG_CACHE_HOME || join(HOME, ".cache")
-  try {
-    const cat = JSON.parse(readFileSync(join(xdgCache, "lockcode", "models.json"), "utf8"))
-    const ms = cat.opencode?.models || {}
-    const free = Object.entries(ms)
-      .filter(([, m]) => m?.cost?.input === 0)
-      .map(([n]) => n)
-      .sort()
-    if (free[0]) return free[0]
-    return Object.keys(ms).sort()[0]
-  } catch {}
-  return "grok-code"
-}
+// ---------- pertanyaan soal bot → jawaban fix, gak ke AI ----------
+
+// default chat: terverifikasi live di zen (streaming OK, cost 0, tanpa key)
+const CHAT_DEFAULT_MODEL = "nemotron-3-ultra-free"
 
 const rnd = (n) => Math.random().toString(16).slice(2).padEnd(n, "0").slice(0, n)
+
+// akumulasi SSE stream → teks jawaban (delta.content; reasoning dibuang)
+async function readStream(body) {
+  const reader = body.getReader()
+  const dec = new TextDecoder()
+  let buf = "",
+    out = ""
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buf += dec.decode(value, { stream: true })
+    let idx
+    while ((idx = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, idx).trim()
+      buf = buf.slice(idx + 1)
+      if (!line.startsWith("data:")) continue
+      const data = line.slice(5).trim()
+      if (!data || data === "[DONE]") continue
+      try {
+        const d = JSON.parse(data)?.choices?.[0]?.delta?.content
+        if (typeof d === "string") out += d
+      } catch {}
+    }
+  }
+  return out
+}
 
 async function chatMode(chatID, message) {
   let url, headers, modelID
@@ -293,37 +302,35 @@ async function chatMode(chatID, message) {
     modelID = model.slice("9router/".length)
   } else {
     const tok = zenToken()
-    if (!tok) return "Auth Zen gak ketemu. Jalankan `lockcode auth login` dulu, atau /mode agent."
     url = ZEN_API + "/chat/completions"
     headers = {
       "content-type": "application/json",
-      authorization: "Bearer " + tok,
       "user-agent": "opencode/" + lockcodeVersion(),
+      "x-opencode-session": state.sessions[chatID] || "ses_" + rnd(26),
+      "x-opencode-request": "req_" + rnd(26),
       "x-opencode-client": "cli",
-      "x-opencode-session": state.sessions[chatID] || "ses_" + rnd(16),
-      "x-opencode-request": "req_" + rnd(16),
+      ...(tok ? { authorization: "Bearer " + tok } : {}),
     }
-    modelID = model?.startsWith("zen/") ? model.slice(4) : model || defaultChatModel()
+    modelID = model?.startsWith("zen/") ? model.slice(4) : model || CHAT_DEFAULT_MODEL
   }
 
   const hist = state.history[chatID] || []
   const messages = [{ role: "system", content: CHAT_SYSTEM }, ...hist.slice(-16), { role: "user", content: message }]
 
-  let data
+  let reply
   try {
     const res = await fetch(url, {
       method: "POST",
       headers,
-      body: JSON.stringify({ model: modelID, messages }),
+      body: JSON.stringify({ model: modelID, messages, stream: true }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     })
-    if (!res.ok) return "⚠️ API error " + res.status + ": " + (await res.text()).slice(0, 200)
-    data = await res.json()
+    if (!res.ok) return "⚠️ API error " + res.status + " (" + modelID + "): " + (await res.text()).slice(0, 160)
+    reply = await readStream(res.body)
   } catch (e) {
     return "⚠️ " + (e?.message || e)
   }
-  const reply = data?.choices?.[0]?.message?.content
-  if (typeof reply !== "string" || !reply.trim()) return "⚠️ jawaban kosong dari API."
+  if (!reply?.trim()) return "⚠️ jawaban kosong dari API (" + modelID + ")."
 
   hist.push({ role: "user", content: message })
   hist.push({ role: "assistant", content: reply })
@@ -394,6 +401,16 @@ async function handleCommand(chatID, fromID, text) {
     return "Pilihan: /mode agent atau /mode chat"
   }
 
+  if (cmd === "/allow") {
+    if (String(fromID) !== String(ADMIN_ID)) return "Perintah ini buat admin aja."
+    if (!/^\d+$/.test(arg)) return "Pakai: /allow <user_id> — contoh: /allow 123456789"
+    if (!state.allowed) state.allowed = []
+    if (arg === String(ADMIN_ID) || state.allowed.includes(arg)) return "ID itu udah terdaftar."
+    state.allowed.push(arg)
+    save()
+    return `OK, ${arg} sekarang bisa pakai bot.`
+  }
+
   if (cmd === "/new") {
     delete state.sessions[chatID]
     delete state.history[chatID]
@@ -408,6 +425,7 @@ async function handleCommand(chatID, fromID, text) {
       "/new — reset konteks chat ini",
       "/mode — lihat/ganti mode (agent / chat)",
       "/model — ganti model (admin)",
+      "/allow — izinkan user lain (admin)",
       "/status — info bot",
     ].join("\n")
   }
@@ -444,13 +462,15 @@ async function loop(offset = 0) {
       offset = up.update_id + 1
       const msg = up.message
       if (!msg?.text || msg.text.startsWith("/")) {
-        if (msg?.text && ALLOWED.has(String(msg.from?.id))) {
+        if (msg?.text && isAllowed(msg.from?.id)) {
           const r = await handleCommand(msg.chat.id, msg.from.id, msg.text)
           if (r) await send(msg.chat.id, r)
+        } else if (msg?.text) {
+          await send(msg.chat.id, "Lu gak terdaftar di bot ini. Kirim user ID lu (" + msg.from?.id + ") ke admin.")
         }
         continue
       }
-      if (!ALLOWED.has(String(msg.from?.id))) continue // gak dikenal → diabaikan
+      if (!isAllowed(msg.from?.id)) continue // gak dikenal → diabaikan
 
       // pertanyaan soal bot → jawaban fix, gak panggil AI
       if (isMeta(msg.text)) {
@@ -481,6 +501,7 @@ async function setMenu() {
         { command: "new", description: "chat baru (reset konteks)" },
         { command: "mode", description: "ganti mode: agent / chat" },
         { command: "model", description: "ganti model (admin)" },
+        { command: "allow", description: "izinkan user lain (admin)" },
         { command: "status", description: "info bot" },
         { command: "help", description: "cara pakai" },
       ],

@@ -4,12 +4,13 @@ Bot Telegram yang jalan di atas lockcode — pakai model, skills, plugin, dan to
 
 Dua mode:
 - **agent** (default) — full lockcode: tools, skills, baca/tulis file, bash. Session per chat.
-- **chat** — jawab langsung dari API Zen (token diambil otomatis dari `auth.json` lockcode). Cepat, chat doang.
+- **chat** — jawab langsung dari API Zen (streaming). Default model: `nemotron-3-ultra-free`
+  (gratis, terverifikasi). Token dari `auth.json` dipakai kalau ada; beberapa model free jalan tanpa key.
 
 Balasan terformat: code block, inline code, bold, tabel rata kolom.
 
 ```
-Pesan Telegram → bot (polling, ringan) → agent: lockcode run · chat: API Zen → jawaban
+Pesan Telegram → bot (polling, ringan) → agent: lockcode run · chat: API Zen (stream) → jawaban
 ```
 
 ## Setup di HP (Termux)
@@ -42,11 +43,22 @@ Menu `/` otomatis muncul di UI Telegram (tombol menu / ketik `/`).
 | `/model` | admin | lihat model aktif |
 | `/model 9router/<model>` | admin | ganti ke model 9router (cek dulu port 20128 hidup) |
 | `/model default` | admin | balik ke model free bawaan |
+| `/allow <user_id>` | admin | izinkan user/akun lain pakai bot |
 | `/new` | semua | reset konteks chat ini (sesi baru) |
 | `/status` | semua | status mode, model, sesi, 9router |
 | `/help` | semua | cara pakai |
 
+Yang gak terdaftar (bukan admin / `TELE_ALLOWED_IDS` / hasil `/allow`) diemin — biar gak kena spam bot.
 Pertanyaan soal bot ("kamu siapa", "pakai model apa", "chat dimana") dijawab fix: `lockcode - AI asistent` — gak dikirim ke AI.
+
+## Biar bot gak mati di background
+
+Wake-lock doang gak cukup — yang ngebunuh Termux itu battery optimizer Android/OEM:
+
+1. **Settings → Apps → Termux → Battery → Unrestricted** (Android lama: "Not optimized") — wajib
+2. **Lock Termux di recents** (tarik kartu app ke bawah → gembok)
+3. HP OEM (Oppo/Vivo/Xiaomi/Realme): **allow autostart** di security app
+4. Pasang app **Termux:Boot** → `lockcode telegram` udah bikin script boot, bot nyala sendiri pas HP restart
 
 ## Pakai model 9router (opsional)
 
