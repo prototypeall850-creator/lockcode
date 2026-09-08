@@ -2,8 +2,14 @@
 
 Bot Telegram yang jalan di atas lockcode — pakai model, skills, plugin, dan tools lockcode. Nol dependency (Node 18+ bawaan `fetch`).
 
+Dua mode:
+- **agent** (default) — full lockcode: tools, skills, baca/tulis file, bash. Session per chat.
+- **chat** — jawab langsung dari API Zen (token diambil otomatis dari `auth.json` lockcode). Cepat, chat doang.
+
+Balasan terformat: code block, inline code, bold, tabel rata kolom.
+
 ```
-Pesan Telegram → bot (polling, ringan) → lockcode run (session per chat) → jawaban
+Pesan Telegram → bot (polling, ringan) → agent: lockcode run · chat: API Zen → jawaban
 ```
 
 ## Setup di HP (Termux)
@@ -26,13 +32,21 @@ Default model = model free bawaan. Yang bukan admin cuma bisa chat (juga bisa di
 
 ## Perintah bot
 
+Menu `/` otomatis muncul di UI Telegram (tombol menu / ketik `/`).
+
 | Perintah | Siapa | Fungsi |
 |---|---|---|
+| `/mode` | admin | lihat mode aktif |
+| `/mode agent` | admin | full lockcode (tools, skills, file) |
+| `/mode chat` | admin | jawab langsung dari API Zen — cepat, tanpa tools |
 | `/model` | admin | lihat model aktif |
 | `/model 9router/<model>` | admin | ganti ke model 9router (cek dulu port 20128 hidup) |
 | `/model default` | admin | balik ke model free bawaan |
 | `/new` | semua | reset konteks chat ini (sesi baru) |
-| `/status` | semua | status model, sesi, 9router |
+| `/status` | semua | status mode, model, sesi, 9router |
+| `/help` | semua | cara pakai |
+
+Pertanyaan soal bot ("kamu siapa", "pakai model apa", "chat dimana") dijawab fix: `lockcode - AI asistent` — gak dikirim ke AI.
 
 ## Pakai model 9router (opsional)
 
@@ -80,7 +94,8 @@ cat > $PREFIX/var/service/lockcode-tele/run <<'RUN'
 #!/data/data/com.termux/files/usr/bin/sh
 export TELE_TOKEN="ISI_TOKEN"
 export TELE_ADMIN_ID="ISI_ID"
-exec termux-wake-lock node /data/data/com.termux/files/home/lockcode-tele/bot.mjs
+termux-wake-lock || true
+exec node /data/data/com.termux/files/home/lockcode-tele/bot.mjs
 RUN
 chmod +x $PREFIX/var/service/lockcode-tele/run
 sv up lockcode-tele

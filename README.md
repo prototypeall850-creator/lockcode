@@ -11,7 +11,7 @@ curl -fsSL https://raw.githubusercontent.com/prototypeall850-creator/lockcode/ma
 
 Installer otomatis: pasang repo glibc + glibc-runner, download binary **terbaru**
 dari GitHub Releases, bikin wrapper. Pin versi tertentu:
-`curl ... | bash -s v0.1.9`
+`curl ... | bash -s v0.1.10`
 
 ## Bot Telegram (asisten AI di atas lockcode)
 
@@ -40,7 +40,7 @@ lockcode models          # list model
 ```bash
 bun install
 cd packages/lockcode
-LOCKCODE_CHANNEL=latest LOCKCODE_VERSION=0.1.9 bun run script/build.ts --skip-install
+LOCKCODE_CHANNEL=latest LOCKCODE_VERSION=0.1.10 bun run script/build.ts --skip-install
 # output: dist/lockcode-linux-arm64/bin/lockcode
 # kecilin: # (opsional) upx --best --lzma — GAK DISARANKAN: UPX binary gak jalan di Android Termux
 ```
