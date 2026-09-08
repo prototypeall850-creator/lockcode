@@ -131,7 +131,8 @@ export const TelegramCommand = {
         "set -a",
         `. ${INSTALL_DIR}/.env`,
         "set +a",
-        `exec termux-wake-lock node ${botPath} >> ${INSTALL_DIR}/bot.log 2>&1`,
+        "termux-wake-lock || true",
+        `exec node ${botPath} >> ${INSTALL_DIR}/bot.log 2>&1`,
         "",
       ].join("\n")
       await fs.writeFile(path.join(serviceDir, "run"), runScript, { mode: 0o755 })
