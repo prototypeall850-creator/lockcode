@@ -18,6 +18,7 @@ import { ExportCommand } from "./cli/cmd/export"
 import { ImportCommand } from "./cli/cmd/import"
 import { AttachCommand } from "./cli/cmd/attach"
 import { TuiThreadCommand } from "./cli/cmd/tui"
+import { TelegramCommand } from "./cli/cmd/telegram"
 import { EOL } from "os"
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
@@ -76,6 +77,7 @@ const cli = yargs(args)
   .completion("completion", "generate shell completion script")
   .command(McpCommand)
   .command(TuiThreadCommand)
+  .command(TelegramCommand)
   .command(AttachCommand)
   .command(RunCommand)
   .command(GenerateCommand)
